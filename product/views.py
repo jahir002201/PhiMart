@@ -36,13 +36,14 @@ class ProductViewSet(ModelViewSet):
         return super().create(request, *args, **kwargs)
     
     serializer_class = ProductSerializer
-    queryset = Product.objects.all()
     pagination_class = DefaultPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = ProductFilter
     search_fields = ['name', 'description', 'category__name']
     ordering_fields = ['price', 'updated_at']
     permission_classes = [IsAdminOrReadOnly]
+    def get_queryset(self):
+        return Product.objects.prefetch_related('images').all()
 
 class ProductImageViewSet(ModelViewSet):
     serializer_class = ProductImageSerializer
