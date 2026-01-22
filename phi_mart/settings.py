@@ -104,10 +104,14 @@ INTERNAL_IPS = [
 # }
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL'),
-        conn_max_age=600
-    )
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": config('dbname'),
+        "USER": config('user'),
+        "PASSWORD": config('password'),
+        "HOST": config('host'),
+        "PORT": config('port'),
+    }
 }
 
 # Password validation
