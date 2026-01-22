@@ -1,6 +1,7 @@
 from rest_framework import serializers
-from product.models import Category, Product, Review
+from product.models import Category, Product, Review, ProductImage
 from decimal import Decimal
+from django.contrib.auth import get_user_model
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -10,8 +11,13 @@ class CategorySerializer(serializers.ModelSerializer):
         model = Category
         fields = ["id", "name", "description", "product_count"]
 
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image']
 
 class ProductSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True, read_only=True)
     price_with_tax = serializers.SerializerMethodField(method_name="calculate_tax")
 
     class Meta:
@@ -24,6 +30,7 @@ class ProductSerializer(serializers.ModelSerializer):
             "stock",
             "category",
             "price_with_tax",
+            "images",
         ]
 
     def calculate_tax(self, product):
@@ -33,11 +40,28 @@ class ProductSerializer(serializers.ModelSerializer):
         if price < 0:
             raise serializers.ValidationError("Price cannot be negative.")
         return price
-    
+
+class SimpleUserSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField(
+        method_name='get_current_user_name')
+
+    class Meta:
+        model = get_user_model()
+        fields = ['id', 'name']
+
+    def get_current_user_name(self, obj):
+        return obj.get_full_name()
+
 class ReviewSerializer(serializers.ModelSerializer):
+    # user = SimpleUserSerializer()
+    user = serializers.SerializerMethodField(method_name='get_user')
     class Meta:
         model = Review
-        fields = ["id", "name", "description", "date"]
+        fields = ['id', 'user', 'product', 'ratings', 'comment']
+        read_only_fields = ['user', 'product']
+    
+    def get_user(self, obj):
+        return SimpleUserSerializer(obj.user).data
 
     def create(self, validated_data):
         product_id = self.context["product_id"]
