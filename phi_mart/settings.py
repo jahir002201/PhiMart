@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django_filters',
     'rest_framework',
     'djoser',
+    'corsheaders',
     'api',
     'users',
     'order',
@@ -57,6 +58,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -85,6 +87,10 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'phi_mart.wsgi.app'
+
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:5173',
+]
 
 INTERNAL_IPS = [
     # ...
