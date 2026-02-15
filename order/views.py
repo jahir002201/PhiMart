@@ -9,16 +9,22 @@ from rest_framework.response import Response
 from order.services import OrderService
 from rest_framework import status
 
-class CartViewSet(CreateModelMixin, RetrieveModelMixin, DestroyModelMixin, GenericViewSet):
+class CartViewSet(RetrieveModelMixin, DestroyModelMixin, GenericViewSet):
+    """
+    Manage user carts: retrieve, delete, and create if not exists.
+    """
     serializer_class = CartSerializer
     permission_classes = [IsAuthenticated]
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+
     def get_queryset(self):
         if getattr(self, 'swagger_fake_view', False):
             return Cart.objects.none()
         return Cart.objects.prefetch_related('items__product').filter(user=self.request.user)
+
     def create(self, request, *args, **kwargs):
+        """
+        Create a cart if user doesn't have one. Return existing cart if present.
+        """
         existing_cart = Cart.objects.filter(user=request.user).first()
 
         if existing_cart:
