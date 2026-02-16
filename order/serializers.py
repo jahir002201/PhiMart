@@ -2,6 +2,7 @@ from rest_framework import serializers
 from order.models import Cart, CartItem, Order, OrderItem
 from product.models import Product
 from order.services import OrderService
+from users.serializers import UserSerializer
 
 
 class EmptySerializer(serializers.Serializer):
@@ -100,6 +101,7 @@ class UpdateOrderSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True)
+    user = UserSerializer(read_only=True)
     class Meta:
         model = Order
         fields = ['id', 'user', 'status', 'total_price', 'created_at', 'items']
