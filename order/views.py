@@ -1,9 +1,10 @@
 from rest_framework.viewsets import GenericViewSet, ModelViewSet
 from rest_framework.mixins import RetrieveModelMixin, DestroyModelMixin
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view
 from rest_framework.response import Response
 from rest_framework import status
+from django.http import HttpResponseRedirect
 
 from order.models import Cart, CartItem, Order
 from order.serializers import (
@@ -17,6 +18,10 @@ from order.serializers import (
     EmptySerializer
 )
 from order.services import OrderService
+from sslcommerz_lib import SSLCOMMERZ
+from django.conf import settings as main_settings
+
+
 
 
 class CartViewSet(RetrieveModelMixin, DestroyModelMixin, GenericViewSet):
@@ -101,3 +106,60 @@ class OrderViewset(ModelViewSet):
         serializer.save()
         updated_status = serializer.validated_data.get('status', 'unknown')
         return Response({'status': f'Order status updated to {updated_status}'}, status=status.HTTP_200_OK)
+    
+@api_view(['POST'])
+def initiate_payment(request):
+    user = request.user
+    amount = request.data.get("amount")
+    order_id = request.data.get("orderId")
+    num_items = request.data.get("numItems")
+
+    settings = {'store_id': 'phima6993243574e0d',
+                'store_pass': 'phima6993243574e0d@ssl', 'issandbox': True}
+    sslcz = SSLCOMMERZ(settings)
+    post_body = {}
+    post_body['total_amount'] = amount
+    post_body['currency'] = "BDT"
+    post_body['tran_id'] = f"txn_{order_id}"
+    post_body['success_url'] = f"{main_settings.BACKEND_URL}/api/v1/payment/success/"
+    post_body['fail_url'] = f"{main_settings.BACKEND_URL}/api/v1/payment/fail/"
+    post_body['cancel_url'] = f"{main_settings.BACKEND_URL}/api/v1/payment/cancel/"
+    post_body['emi_option'] = 0
+    post_body['cus_name'] = f"{user.first_name} {user.last_name}"
+    post_body['cus_email'] = user.email
+    post_body['cus_phone'] = user.phone_number
+    post_body['cus_add1'] = user.address
+    post_body['cus_city'] = "Dhaka"
+    post_body['cus_country'] = "Bangladesh"
+    post_body['shipping_method'] = "Courier"
+    post_body['multi_card_name'] = ""
+    post_body['num_of_item'] = num_items
+    post_body['product_name'] = "E-commerce Products"
+    post_body['product_category'] = "General"
+    post_body['product_profile'] = "general"
+
+    response = sslcz.createSession(post_body)
+
+    if response.get("status") == 'SUCCESS':
+        return Response({"payment_url": response['GatewayPageURL']})
+    return Response({"error": "Payment initiation failed"}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+def payment_success(request):
+    print("Inside success")
+    order_id = request.data.get("tran_id").split('_')[1]
+    order = Order.objects.get(id=order_id)
+    order.status = "Ready To Ship"
+    order.save()
+    return HttpResponseRedirect(f"{main_settings.FRONTEND_URL}/dashboard/orders/")
+
+
+@api_view(['POST'])
+def payment_cancel(request):
+    return HttpResponseRedirect(f"{main_settings.FRONTEND_URL}/dashboard/orders/")
+
+
+@api_view(['POST'])
+def payment_fail(request):
+    print("Inside fail")
+    return HttpResponseRedirect(f"{main_settings.FRONTEND_URL}/dashboard/orders/")
