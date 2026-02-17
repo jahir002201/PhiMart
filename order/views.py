@@ -111,63 +111,42 @@ class OrderViewset(ModelViewSet):
 @api_view(['POST'])
 def initiate_payment(request):
     user = request.user
+    amount = request.data.get("amount")
     order_id = request.data.get("orderId")
-
-    # 1️⃣ Validate order belongs to user
-    try:
-        order = Order.objects.prefetch_related('items').get(id=order_id, user=user)
-    except Order.DoesNotExist:
-        return Response({"error": "Invalid order"}, status=400)
-
-    # 2️⃣ Prevent double payment
-    if order.status == "Paid":
-        return Response({"error": "Order already paid"}, status=400)
-
-    # 3️⃣ Calculate from DB (NOT frontend)
-    amount = order.total_price
-    num_items = order.items.count()
+    num_items = request.data.get("numItems")
 
     settings = {
-        'store_id': main_settings.SSLCOMMERZ_STORE_ID,
-        'store_pass': main_settings.SSLCOMMERZ_STORE_PASS,
-        'issandbox': True  # False in production
+    'store_id': main_settings.SSLCOMMERZ_STORE_ID,
+    'store_pass': main_settings.SSLCOMMERZ_STORE_PASS,
+    'issandbox': True
     }
-
     sslcz = SSLCOMMERZ(settings)
-
-    post_body = {
-        'total_amount': amount,
-        'currency': "BDT",
-        'tran_id': f"txn_{order.id}",
-        'success_url': f"{main_settings.BACKEND_URL}/api/v1/payment/success/",
-        'fail_url': f"{main_settings.BACKEND_URL}/api/v1/payment/fail/",
-        'cancel_url': f"{main_settings.BACKEND_URL}/api/v1/payment/cancel/",
-        'ipn_url': f"{main_settings.BACKEND_URL}/api/v1/payment/ipn/",
-        'emi_option': 0,
-        'cus_name': f"{user.first_name} {user.last_name}",
-        'cus_email': user.email,
-        'cus_phone': user.phone_number,
-        'cus_add1': user.address,
-        'cus_city': "Dhaka",
-        'cus_country': "Bangladesh",
-        'shipping_method': "NO",
-        'multi_card_name': "",
-        'num_of_item': num_items,
-        'product_name': "E-commerce Order",
-        'product_category': "General",
-        'product_profile': "general"
-    }
+    post_body = {}
+    post_body['total_amount'] = amount
+    post_body['currency'] = "BDT"
+    post_body['tran_id'] = f"txn_{order_id}"
+    post_body['success_url'] = f"{main_settings.BACKEND_URL}/api/v1/payment/success/"
+    post_body['fail_url'] = f"{main_settings.BACKEND_URL}/api/v1/payment/fail/"
+    post_body['cancel_url'] = f"{main_settings.BACKEND_URL}/api/v1/payment/cancel/"
+    post_body['emi_option'] = 0
+    post_body['cus_name'] = f"{user.first_name} {user.last_name}"
+    post_body['cus_email'] = user.email
+    post_body['cus_phone'] = user.phone_number
+    post_body['cus_add1'] = user.address
+    post_body['cus_city'] = "Dhaka"
+    post_body['cus_country'] = "Bangladesh"
+    post_body['shipping_method'] = "NO"
+    post_body['multi_card_name'] = ""
+    post_body['num_of_item'] = num_items
+    post_body['product_name'] = "E-commerce Products"
+    post_body['product_category'] = "General"
+    post_body['product_profile'] = "general"
 
     response = sslcz.createSession(post_body)
 
-    if response.get("status") == "SUCCESS":
-        return Response({
-            "payment_url": response.get("GatewayPageURL")
-        })
-
-    return Response({
-        "error": response
-    }, status=400)
+    if response.get("status") == 'SUCCESS':
+        return Response({"payment_url": response['GatewayPageURL']})
+    return Response({"error": "Payment initiation failed"}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['POST'])
 def payment_success(request):
