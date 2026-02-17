@@ -2,6 +2,7 @@ from django.urls import path, include
 from product.views import CategoryViewSet, ProductViewSet, ReviewViewSet, ProductImageViewSet
 from order.views import CartViewSet, CartItemViewSet, OrderViewset, initiate_payment, payment_success, payment_fail, payment_cancel, HasOrderedProduct
 from rest_framework_nested import routers
+from api.views import dashboard_stats
 
 router = routers.DefaultRouter()
 router.register('categories', CategoryViewSet, basename='category')
@@ -26,4 +27,5 @@ urlpatterns = [
     path("payment/fail/", payment_fail, name="payment-fail"),
     path("payment/cancel/", payment_cancel, name="payment-cancel"),
     path('orders/has-ordered/<int:product_id>/', HasOrderedProduct.as_view()),
+    path('dashboard/stats/', dashboard_stats, name='dashboard-stats'),
 ]
