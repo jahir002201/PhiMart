@@ -24,6 +24,7 @@ from django.conf import settings as main_settings
 
 
 
+
 class CartViewSet(RetrieveModelMixin, DestroyModelMixin, GenericViewSet):
     serializer_class = CartSerializer
     permission_classes = [IsAuthenticated]
@@ -114,8 +115,11 @@ def initiate_payment(request):
     order_id = request.data.get("orderId")
     num_items = request.data.get("numItems")
 
-    settings = {'store_id': 'phima6993243574e0d',
-                'store_pass': 'phima6993243574e0d@ssl', 'issandbox': True}
+    settings = {
+    'store_id': main_settings.SSLCOMMERZ_STORE_ID,
+    'store_pass': main_settings.SSLCOMMERZ_STORE_PASS,
+    'issandbox': True
+    }
     sslcz = SSLCOMMERZ(settings)
     post_body = {}
     post_body['total_amount'] = amount
@@ -131,7 +135,7 @@ def initiate_payment(request):
     post_body['cus_add1'] = user.address
     post_body['cus_city'] = "Dhaka"
     post_body['cus_country'] = "Bangladesh"
-    post_body['shipping_method'] = "Courier"
+    post_body['shipping_method'] = "NO"
     post_body['multi_card_name'] = ""
     post_body['num_of_item'] = num_items
     post_body['product_name'] = "E-commerce Products"
